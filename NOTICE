@@ -1,0 +1,9 @@
+tehas-plugin-hoststats
+Copyright 2026 Jani Tarvainen
+
+Licensed under the Apache License, Version 2.0, in LICENSE.
+
+The view's code and styles were copied from tehas
+(https://github.com/tehas-app/tehas), host/fun/, at commit
+f4759c1ab1b4b8984089cafc98371d8326ceeef1, which is under the same licence
+and copyright.

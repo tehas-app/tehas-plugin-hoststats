@@ -1,0 +1,11 @@
+{
+  "name": "tehas-plugin-hoststats",
+  "private": true,
+  "description": "A tehas plugin: the machine the factory runs on: its readings, processes and units. No dependencies: this file only gives `npm test` a home.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Host</title>
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="host.css">
+  <script type="module" src="host-view.js"></script>
+</head>
+<body>
+  <main class="page">
+    <p class="host-none" id="host-none">Reading the host feed.</p>
+    <section class="host" id="host" aria-labelledby="host-title" hidden>
+      <div class="host-head">
+        <h1 id="host-title">HOST</h1>
+        <p class="host-scope"><span id="host-cpus"></span> <span>LOAD</span> <span id="host-load"></span> <span class="host-state" id="host-state" role="status">CHECKING</span> <span class="host-age" id="host-age"></span></p>
+      </div>
+      <div class="host-body">
+        <p class="host-readings">
+          <span>CPU <span class="host-gauge" id="host-cpu-gauge" aria-hidden="true"></span> <b id="host-cpu">--</b></span>
+          <span>MEMORY <span class="host-gauge" id="host-mem-gauge" aria-hidden="true"></span> <b id="host-mem">-</b> <b id="host-mem-percent">--</b></span>
+        </p>
+        <table class="host-table" aria-label="Processes on the host">
+          <thead><tr><th scope="col">PROCESS</th><th scope="col" class="col-pid">PID</th><th scope="col" class="num">CPU</th><th scope="col" class="num col-mem">MEM</th><th scope="col" class="num">UP</th></tr></thead>
+          <tbody id="host-rows"></tbody>
+        </table>
+        <table class="host-table host-units" id="host-units" aria-label="Units of the factory">
+          <thead><tr><th scope="col">UNIT</th><th scope="col">INSTALLED</th><th scope="col">STATE</th><th scope="col" class="num col-next">NEXT</th></tr></thead>
+          <tbody id="host-unit-rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
