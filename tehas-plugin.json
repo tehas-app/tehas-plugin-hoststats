@@ -6,6 +6,6 @@
   "license": "Apache-2.0",
   "build": "Dockerfile",
   "asks": ["view", "menu", "feed:host"],
-  "timeout": 60,
+  "timeout": 120,
   "view": {"label": "Host"}
 }

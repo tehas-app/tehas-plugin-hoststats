@@ -19,7 +19,7 @@ test('the manifest asks what the spec says, with the fields of a batch plugin wi
     license: 'Apache-2.0',
     build: 'Dockerfile',
     asks: ASKS,
-    timeout: 60,
+    timeout: 120,
     view: { label: 'Host' },
   });
 });
