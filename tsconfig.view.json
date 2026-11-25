@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "jsx": "preserve",
+    "jsxImportSource": "@solidjs/web",
+    "rootDir": "src/view",
+    "declaration": true,
+    "declarationDir": "build/types/view",
+    "outDir": "build/view"
+  },
+  "include": ["src/view/**/*.ts", "src/view/**/*.tsx"]
+}

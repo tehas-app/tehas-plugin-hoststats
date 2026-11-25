@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023"],
+    "rootDir": "src/driver",
+    "declaration": true,
+    "declarationDir": "build/types/driver",
+    "outDir": "dist/driver"
+  },
+  "include": ["src/driver/**/*.ts", "src/tehas.d.ts"]
+}

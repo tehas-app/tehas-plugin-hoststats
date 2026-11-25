@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tehas-app/tehas-plugin-example/schema/manifest.schema.json",
+  "title": "tehas-plugin.json",
+  "description": "A plugin's manifest, tehas-plugin.json, under plugin spec v2, revision 8, part 2.2, as this example reads it. Every object is closed. TODO(#3297, #3301): replace with the schema tehas ships in api/.",
+  "type": "object",
+  "required": [
+    "plugin",
+    "spec",
+    "name",
+    "label",
+    "asks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "plugin": {
+      "const": 2
+    },
+    "spec": {
+      "type": "string",
+      "pattern": "^2\\.[0-9]+\\.[0-9]+-r[0-9]+$"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]{0,11}$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 24
+    },
+    "kind": {
+      "enum": [
+        "plugin",
+        "adapter"
+      ]
+    },
+    "runtime": {
+      "enum": [
+        "starlingmonkey",
+        "component"
+      ]
+    },
+    "timeout": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 600
+    },
+    "asks": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(view|menu|product|history|keep|record|model|model:images|model:[0-9]{1,9}|every:[0-9]{1,4}[mh]|clock:(daily|mon-fri)@[0-2][0-9]:[0-5][0-9](,[0-2][0-9]:[0-5][0-9])*|view:[a-z-]{1,16}|skill:[a-z-]{1,16}|action:[a-z-]{1,16}|viewer:login|feed:[a-z-]{1,16}|live:[a-z-]{1,16})$"
+      }
+    },
+    "driver": {
+      "type": "string",
+      "pattern": "^dist/driver/[A-Za-z0-9_-]+\\.js$"
+    },
+    "actions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "label",
+          "args"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "args": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "views": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "entry",
+          "open"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z-]{1,16}$"
+          },
+          "entry": {
+            "type": "string",
+            "pattern": "^dist/view/[A-Za-z0-9_-]+\\.html$"
+          },
+          "open": {
+            "enum": [
+              "dock",
+              "page",
+              "full"
+            ]
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^skills/[a-z-]{1,16}/SKILL\\.md$"
+      }
+    },
+    "wasm": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^dist/(view/)?wasm/[A-Za-z0-9_-]+\\.wasm$"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^(src|wasm)/"
+          },
+          "recipe": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "view_wasm": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^dist/(view/)?wasm/[A-Za-z0-9_-]+\\.wasm$"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^(src|wasm)/"
+          },
+          "recipe": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "vendor": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "version",
+          "upstream",
+          "files"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "upstream": {
+            "type": "string",
+            "pattern": "^https://"
+          },
+          "files": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "solid": {
+      "type": "string",
+      "pattern": "^2\\.[0-9]+\\.[0-9]+$"
+    }
+  }
+}

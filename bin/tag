@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Tags a release: an annotated tag vX.Y.Z, the version bin/next-version
+# prints, on the current commit. The message lists the commit subjects since
+# the last tag and names the plugin spec revision from tehas-plugin.json ("spec").
+# release.yml runs it on main after check passes, and pushes the tag.
+#
+# It refuses a dirty tree, a commit that is not on main, a tag that already
+# exists, and a plugin bin/validate does not call ready. It never moves or
+# deletes a tag.
+#
+# It runs on the author's machine or in CI, never in the plugin.
+#
+# usage: bin/tag [--dry-run]
+#   --dry-run  print the tag and its message, and tag nothing
+# exit: 0 tagged, or nothing new to tag; 1 refused; 64 usage.
+set -euo pipefail
+
+dry=0
+case "${1:-}" in
+  "") ;;
+  --dry-run) dry=1 ;;
+  *) echo "usage: bin/tag [--dry-run]" >&2; exit 64 ;;
+esac
+[ "$#" -le 1 ] || { echo "usage: bin/tag [--dry-run]" >&2; exit 64; }
+
+here=$(cd "$(dirname "$0")" && pwd)
+# From anywhere in the repository: the manifest and the tree are the root's.
+cd "$here/.."
+refuse() { echo "tag: $*" >&2; exit 1; }
+
+[ -z "$(git status --porcelain)" ] || refuse "the tree has changes; commit or remove them first"
+on_main=0
+for main in refs/heads/main refs/remotes/origin/main; do
+  if git rev-parse -q --verify "$main" >/dev/null && git merge-base --is-ancestor HEAD "$main"; then
+    on_main=1
+  fi
+done
+[ "$on_main" -eq 1 ] || refuse "HEAD is not on main"
+
+version=$("$here/next-version")
+if [ -z "$version" ]; then
+  echo "tag: no commits since the last tag; nothing to tag"
+  exit 0
+fi
+git rev-parse -q --verify "refs/tags/$version" >/dev/null && refuse "$version exists; a tag is never moved"
+verdict=$("$here/validate" 2>/dev/null | tail -n 1) || true
+[ "$verdict" = ready ] || refuse "bin/validate says ${verdict:-nothing}; a release is tagged only when it says ready"
+
+spec=$(node -e 'const m = JSON.parse(require("fs").readFileSync("tehas-plugin.json", "utf8")); if (typeof m.spec !== "string") process.exit(1); process.stdout.write(m.spec);') ||
+  refuse "tehas-plugin.json has no \"spec\" revision"
+last=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD 2>/dev/null || true)
+message="$version
+
+Plugin spec $spec (tehas-plugin.json \"spec\").
+
+$(git log --no-merges --format='- %s' "${last:+$last..}HEAD")"
+
+if [ "$dry" -eq 1 ]; then
+  echo "would tag $version on $(git rev-parse --short HEAD):"
+  echo
+  echo "$message"
+  exit 0
+fi
+git tag -a "$version" -m "$message"
+echo "tagged $version"

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "types": ["node"],
+    "rootDir": ".",
+    "outDir": "build/js",
+    "rewriteRelativeImportExtensions": true,
+    "erasableSyntaxOnly": true
+  },
+  "include": ["tests/**/*.ts", "sim/**/*.ts", "scripts/**/*.ts", "src/tehas.d.ts"]
+}

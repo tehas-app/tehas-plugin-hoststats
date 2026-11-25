@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noEmitOnError": true,
+    "target": "es2023",
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    "removeComments": false,
+    "sourceMap": false,
+    "newLine": "lf",
+    "types": []
+  }
+}

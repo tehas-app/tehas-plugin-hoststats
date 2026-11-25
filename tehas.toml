@@ -1,0 +1,14 @@
+# How this repository is kept, for the tehas system. Each table has one
+# owner; [standard] and [platform] are scripts/architecture.py's for now.
+#
+# Plugins follow coding standard v3, the plugin standard. v3 is not approved
+# yet, so this says v2; it moves to v3 when v3 is approved and tagged. A
+# standard only goes up.
+[standard]
+url = "https://github.com/tehas-app/tehas-standard"
+version = "v2"
+
+# The toolchains this repository builds or checks with, at the majors the
+# standard allows. The plugin has no WebAssembly module, so no rust.
+[platform]
+typescript = "7.x"

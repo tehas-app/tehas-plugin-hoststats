@@ -1,0 +1,132 @@
+# The architecture test's checks for a plugin repository.
+# scripts/architecture.py is the same in every tehas repository and reads
+# this file. Each max is a ratchet; a max above 0 says why.
+
+version = 1
+method = "https://github.com/tehas-app/tehas-standard"
+
+[[check]]
+id = "driver-imports"
+rule = "R8"
+what = "a driver imports only tehas and its own files, never node: or a package (spec v2 part 3)"
+pattern = '''\b(from|import)\s*\(?\s*["'](?!tehas["']|\.\.?/)'''
+files = ["src/driver/**/*.ts", "dist/driver/**/*.js"]
+comment = "//"
+max = 0
+
+[[check]]
+id = "no-eval"
+rule = "R3"
+what = "no eval and no Function( in the plugin's own code (spec v2 part 3), comments included"
+pattern = '\beval\b|\bFunction\s*\('
+files = ["src/**/*.ts", "src/**/*.tsx", "dist/**/*.js"]
+max = 0
+
+[[check]]
+id = "computed-import"
+rule = "R8"
+what = "no dynamic import of anything but a string literal, and no require(, in src/ or dist/"
+pattern = '''\bimport\s*\((?!\s*["'][^"'\\]*["']\s*\))|\brequire\s*\('''
+files = ["src/**/*.ts", "src/**/*.tsx", "dist/**/*.js"]
+max = 0
+
+[[check]]
+id = "driver-global-lookup"
+rule = "R8"
+what = "a driver looks nothing up by name: no globalThis"
+pattern = '\bglobalThis\b'
+files = ["src/driver/**/*.ts", "dist/driver/**/*.js"]
+max = 0
+
+[[check]]
+id = "driver-network"
+rule = "R2"
+what = "a driver reaches nothing but the tehas module: no fetch, no sockets"
+pattern = '\bfetch\s*\(|\bWebSocket\b|\bXMLHttpRequest\b'
+files = ["src/driver/**/*.ts", "dist/driver/**/*.js"]
+comment = "//"
+max = 0
+
+[[check]]
+id = "untyped"
+rule = "R4"
+what = "no any in src/: the seams are typed"
+pattern = ':\s*any\b|\bas\s+any\b|<any>'
+files = ["src/**/*.ts", "src/**/*.tsx"]
+comment = "//"
+max = 0
+
+# Coding standard v3's checks for plugins (R11 to R14). scripts/architecture.py
+# names rules R1 to R10 only, so each is filed under the v2 rule it extends;
+# its `what` names the v3 rule.
+
+[[check]]
+id = "ts-escape"
+rule = "R4"
+what = "v3 R12: no TypeScript escape hatch (@ts-ignore, @ts-nocheck, @ts-expect-error)"
+pattern = '@ts-(ignore|nocheck|expect-error)'
+files = ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "sim/**/*.ts", "scripts/**/*.ts"]
+max = 0
+
+[[check]]
+id = "sh-escape"
+rule = "R4"
+what = "v3 R12: no shellcheck disable in bin/"
+pattern = '#\s*shellcheck\s+disable'
+files = ["bin/*"]
+max = 0
+
+[[check]]
+id = "kit-own-fetch"
+rule = "R2"
+what = "v3 R11: no fetch in the views' entries, models and render files; data comes in through src/view/source.ts alone"
+pattern = '\bfetch\s*\('
+files = ["src/view/**/*.ts", "src/view/**/*.tsx"]
+allowed = [
+  # the views' one data source, until the kit's feed and the host's postMessage channel are given
+  "src/view/source.ts",
+]
+comment = "//"
+max = 0
+
+[[check]]
+id = "kit-raw-html"
+rule = "R2"
+what = "v3 R11: no innerHTML, outerHTML, insertAdjacentHTML or document.write"
+pattern = '\b(innerHTML|outerHTML|insertAdjacentHTML|document\.write)\b'
+files = ["src/**/*.ts", "src/**/*.tsx", "src/**/*.html"]
+comment = "//"
+max = 0
+
+[[check]]
+id = "kit-solid-import"
+rule = "R8"
+what = "v3 R11: Solid is imported only by the view's files in src/view/"
+pattern = '''from\s*["'](solid-js|@solidjs/web)'''
+files = ["src/driver/**/*.ts", "src/view/*.model.ts", "src/view/source.ts"]
+max = 0
+
+[[check]]
+id = "model-pure"
+rule = "R3"
+what = "v3 R13: the models and the driver's core read no DOM, network, clock or storage and call no host function; main.ts is the one shell"
+pattern = '''\b(document|window|localStorage)\b|\bfetch\s*\(|Date\.now|new Date\(\)|from\s*["'](tehas|solid-js|@solidjs/web)["']|\b(fs|git|model|wasm)\.(read|write|list|stat|remove|load|chat|head|diff|show|log)\('''
+files = ["src/view/*.model.ts", "src/driver/host.ts"]
+comment = "//"
+max = 0
+
+[[check]]
+id = "plugin-provider"
+rule = "R2"
+what = "v3 R14: no model provider's host or key in src/; the model only through model.chat"
+pattern = '(api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|OPENAI_API_KEY|ANTHROPIC_API_KEY)'
+files = ["src/**"]
+max = 0
+
+[[check]]
+id = "global-state"
+rule = "R3"
+what = "no mutable module state in src/: no top-level let or var, exported or not"
+pattern = '^(export\s+)?(let|var)\s'
+files = ["src/**/*.ts", "src/**/*.tsx"]
+max = 0

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Makes dist/ from src/: the driver's JavaScript, the view's JavaScript, HTML
+# and CSS, and any WebAssembly module. It is the one entry point for the
+# build: check.yml calls it, and an author who makes JS, HTML or wasm with
+# other tools changes this script and nothing else.
+#
+# It runs on the author's machine or in CI, never in the plugin or the
+# operator. tehas deploys the committed dist/ and builds nothing.
+#
+# The tools are pinned in package.json and package-lock.json: TypeScript 7's
+# tsc checks the types and writes the JavaScript, and Solid 2's compiler
+# (through Babel) turns the view's JSX into DOM code. scripts/build.mjs holds
+# the steps. The score module in src/wasm/score/ (Rust, a cdylib) is built here with
+# the toolchain src/wasm/score/rust-toolchain.toml pins, into dist/wasm/score.wasm,
+# with its name section kept. Without src/wasm/score/ (bin/new --no-wasm) that step
+# goes. (componentize-js is not a plugin's tool: tehas builds the engine.)
+#
+# usage: bin/build
+# exit: 0 dist/ is made; 1 a type error, a compile error or a dist/ check
+#       failed; 64 usage; 78 src/wasm/score/ is there but not the pinned Rust.
+set -euo pipefail
+
+if [ "$#" -ne 0 ]; then
+  echo "usage: bin/build" >&2
+  exit 64
+fi
+cd "$(dirname "$0")/.."
+[ -d node_modules ] || npm ci --no-audit --no-fund
+node scripts/build.mjs
+
+rm -rf dist/wasm
+if [ -d src/wasm/score ]; then
+  pinned=$(sed -n 's/^channel = "\(.*\)"$/\1/p' src/wasm/score/rust-toolchain.toml)
+  have=$(cd src/wasm/score && rustc --version 2>/dev/null | awk '{print $2}') || true
+  if [ -z "$pinned" ] || [ "$have" != "$pinned" ]; then
+    echo "build: src/wasm/score/ needs rustc $pinned with the wasm32-wasip1 target (have: ${have:-none}); install it with rustup, or remove the part with bin/new --no-wasm" >&2
+    exit 78
+  fi
+  # The paths of this checkout stay out of the module, so a rebuild anywhere
+  # gives the same bytes.
+  (cd src/wasm/score && RUSTFLAGS="--remap-path-prefix=$PWD=src/wasm/score" CARGO_TARGET_DIR=../../../build/wasm \
+    cargo build -q --locked --release --target wasm32-wasip1)
+  mkdir -p dist/wasm
+  cp build/wasm/wasm32-wasip1/release/score.wasm dist/wasm/score.wasm
+  echo "build: dist/wasm/score.wasm made from src/wasm/score/"
+fi

@@ -1,0 +1,34 @@
+/* The tokens this view uses, copied from tehas host/fun/theme-beesknees26.css:
+   ink and one muted green on a near-white ground, white panels with faint
+   edges and soft shadows, and no motion. The typefaces are named, not
+   shipped: a browser without IBM Plex uses the next one in the list. */
+
+:root {
+  color-scheme: light;
+  --font: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-smoothing: antialiased;
+  --type-body: 14px;
+  --field: #f7f8f5;
+  --surface: #fff;
+  --surface-quiet: #f7f8f5;
+  --surface-head: #fff;
+  --accent: #eaf4ec;
+  --text: #20231f;
+  --text-quiet: #515850;
+  --text-warm: #c45342;
+  --line: #e2e5dd;
+  --rule: #e9ebe6;
+  --edge: 1px;
+  --frame: var(--edge) solid var(--line);
+  --shadow-sign: 0 1px 3px rgb(0 0 0 / 0.06);
+}
+
+/* No motion: nothing pops in, blinks or lifts. */
+*,
+*::before,
+*::after {
+  /* biome-ignore lint/complexity/noImportantStyles: the theme kills motion everywhere; these must beat every animation rule, wherever it is declared */
+  animation: none !important;
+  /* biome-ignore lint/complexity/noImportantStyles: the theme kills motion everywhere; these must beat every transition rule, wherever it is declared */
+  transition: none !important;
+}

@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Removes everything the build and the tests make, so the tree is as a fresh
+# clone has it, less dist/: bin/build makes dist/ again, byte for byte.
+# Only the paths listed below go; any other file, ignored or not, stays.
+#
+# It runs on the author's machine, never in the plugin or the operator.
+#
+# usage: bin/reset [--dry-run]
+#   --dry-run  print what would be removed and remove nothing
+# exit: 0 done; 64 usage.
+set -euo pipefail
+
+# What the build and the tests make. Add a path here when a tool makes one.
+GENERATED=(
+  dist/        # bin/build
+  build/       # bin/build: tsc's output before the JSX compile, cargo's target
+  node_modules/  # npm ci
+  test-results/  # Playwright, when a test records a trace
+)
+
+dry=0
+case "${1:-}" in
+  "") ;;
+  --dry-run) dry=1 ;;
+  *) echo "usage: bin/reset [--dry-run]" >&2; exit 64 ;;
+esac
+[ "$#" -le 1 ] || { echo "usage: bin/reset [--dry-run]" >&2; exit 64; }
+
+cd "$(dirname "$0")/.."
+for path in "${GENERATED[@]}"; do
+  [ -e "$path" ] || [ -L "${path%/}" ] || continue
+  if [ "$dry" -eq 1 ]; then
+    echo "would remove $path"
+  else
+    rm -rf -- "${path%/}"
+    echo "removed $path"
+  fi
+done

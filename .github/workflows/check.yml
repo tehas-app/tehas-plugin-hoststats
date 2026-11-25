@@ -1,0 +1,105 @@
+# The plugin's gate, the steps bin/validate runs, in three jobs: `types`
+# (coding standard v3 R12), `plugin` (R14: dist/ built and committed, the
+# checks, tehas plugin check once tehas has it) and `check` (the lint, the
+# tests, the architecture test and the simulator). Runs on every pull
+# request and on pushes to main.
+name: check
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: check-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  types:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.1
+      - name: the pinned tools
+        run: |
+          npm ci --no-audit --no-fund
+          # The Rust that src/wasm/score/rust-toolchain.toml pins, with its target.
+          if [ -d src/wasm/score ]; then (cd src/wasm/score && rustup toolchain install); fi
+      - name: tsc, strict
+        run: |
+          bin/build
+          npx --no-install tsc -p tsconfig.tests.json
+      - name: clippy
+        run: if [ -d src/wasm/score ]; then (cd src/wasm/score && CARGO_TARGET_DIR=../../../build/wasm cargo clippy --locked --release --target wasm32-wasip1 -- -D warnings); fi
+
+  plugin:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.1
+      - name: the pinned tools
+        run: |
+          npm ci --no-audit --no-fund
+          if [ -d src/wasm/score ]; then (cd src/wasm/score && rustup toolchain install); fi
+      - name: build
+        run: bin/build
+      - name: dist/ is committed as built
+        run: git diff --exit-code --stat -- dist/
+      - name: the checks
+        run: |
+          npx --no-install tsc -p tsconfig.tests.json
+          node build/js/scripts/validate.js .
+      - name: tehas plugin check
+        # Placeholder until tehas-factory#3301 ships the command; it does not fail.
+        run: echo "tehas plugin check is not available yet (tehas-factory#3301); skipped"
+
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # architecture.py --base reads the base's architecture.toml from git.
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.1
+      - name: the pinned tools
+        run: |
+          npm ci --no-audit --no-fund
+          npx --no-install playwright install --with-deps --only-shell chromium
+          if [ -d src/wasm/score ]; then (cd src/wasm/score && rustup toolchain install); fi
+      - name: lint
+        run: |
+          npx --no-install biome check .
+          shellcheck -x bin/*
+      - name: tests
+        run: bin/test
+      - name: the architecture test
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # The script must be the standard's, by the sha256 tehas-standard
+          # publishes at the commit this repository follows (it has no tags
+          # yet), not only by the copy of that file kept here.
+          STANDARD=66b757736f2e70a855185104915ae7d95e3b652f
+          curl -fsSL "https://raw.githubusercontent.com/tehas-app/tehas-standard/$STANDARD/tools/architecture.py.sha256" | diff - scripts/architecture.py.sha256
+          (cd scripts && sha256sum --check architecture.py.sha256)
+          python3 -I scripts/architecture_test.py
+          if [ -n "$BASE_REF" ]; then
+            python3 -I scripts/architecture.py --base "origin/$BASE_REF"
+          else
+            python3 -I scripts/architecture.py
+          fi
+      - name: the simulator, every scenario
+        run: bin/sim --smoke --no-build

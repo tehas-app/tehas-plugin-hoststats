@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Runs the plugin on the author's machine with no factory: the real driver
+# and the real view, against the stub of tehas in sim/, served on localhost
+# to open in a browser. Editing src/ rebuilds, plays the scenario again and
+# reloads the page.
+#
+# A scenario is plain JSON in sim/scenarios/<name>.json: what the stub
+# answers, and the hop states the view should show. ok, no-identity,
+# tehas-down and backend-down ship; add one by adding a file.
+#
+# Development only: it never runs in the plugin or the operator, and nothing
+# in sim/ goes into dist/.
+#
+# usage: bin/sim [--scenario <name>] [--seed <n>] [--port <n>] [--no-watch] [--no-build]
+#        bin/sim --smoke
+#   --scenario  the scenario to play (default ok)
+#   --port      the port on 127.0.0.1 (default 8040; 0 picks a free one)
+#   --seed      repeatable stub values (default: fresh random values)
+#   --no-watch  serve without rebuilding on changes
+#   --no-build  use dist/ and build/js/ as they are (the tests run it so)
+#   --smoke     serve every scenario once, check it, and exit
+# exit: 0 stopped; 1 the first build failed; 64 usage or no such scenario.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+build=1
+for a in "$@"; do [ "$a" != --no-build ] || build=0; done
+if [ "$build" -eq 1 ]; then
+  bin/build >/dev/null
+  npx --no-install tsc -p tsconfig.tests.json
+fi
+exec node --import ./build/js/sim/stub/register.js build/js/sim/main.js "$@"
