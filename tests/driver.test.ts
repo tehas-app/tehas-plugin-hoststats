@@ -62,12 +62,27 @@ test("every trigger copies: the press answers, the others write quietly", () => 
   }
 });
 
+// The read is granted by the manifest itself: these tests set no
+// stand.asks, so the stub takes the grants from tehas-plugin.json.
 test("no feed is a failed answer with its reason, and no /out file", () => {
   const answer = run({ trigger: "press", action: REFRESH });
   assert.equal(answer.state, "failed");
-  assert.match((answer as { why: string }).why, /feed is unreadable/);
+  const why = (answer as { why: string }).why;
+  assert.match(why, /feed is unreadable/);
+  // Granted by the manifest, with nothing behind it: the stub's named case.
+  assert.match(why, new RegExp(`no input: ${FEED}`));
   assert.equal(outBytes(), undefined, "a failed run wrote /out anyway");
   assert.match(stand.logs.join("\n"), new RegExp(`${FEED} unreadable`));
+});
+
+test("an ungranted read fails with the grant it needs, and writes no /out", () => {
+  putFeed(FIXTURE);
+  stand.asks = [];
+  const answer = run({ trigger: "press", action: REFRESH });
+  assert.equal(answer.state, "failed");
+  const why = (answer as { why: string }).why;
+  assert.match(why, new RegExp(`not granted: ${FEED} needs feed:host`));
+  assert.equal(outBytes(), undefined, "an ungranted run wrote /out anyway");
 });
 
 test("an unwritable /out is a failed answer with its reason, not a crash", () => {

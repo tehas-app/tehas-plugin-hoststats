@@ -36,7 +36,12 @@ template's `docs/porting.md`; this is what it took here.
    1.x fixture's hash), the model port of the 1.x `data.test.mjs`, and a
    Chromium test that the ported view and the 1.x view draw the same
    snapshot the same; the 1.x view code for it is kept under
-   `tests/golden/1x/`. Each hop has a scenario in `sim/scenarios/`.
+   `tests/golden/1x/`, byte for byte, and no golden comes from a live read.
+   An input reads as one of three in the stub: `not granted`, `no input`
+   (granted, with nothing behind it), or the input; all three are tested,
+   and the driver's fail-closed answer names the case. Most tests set no
+   `stand.asks`, so the manifest's own `feed:host` is the grant exercised.
+   Each hop has a scenario in `sim/scenarios/`.
 6. `bin/validate` says `ready`, and `dist/` is committed with `src/`.
 7. The port's pull request gets a full review; a grant of `model`, `git`
    or a new surface also gets an adversarial pass. This plugin asks no

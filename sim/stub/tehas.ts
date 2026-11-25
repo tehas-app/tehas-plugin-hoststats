@@ -20,18 +20,51 @@ import path from "node:path";
 import { root } from "../root.ts";
 import { stand } from "./state.ts";
 
-const granted = (path: string) => (path.startsWith("/out/") || path.startsWith("/state/")) && !path.includes("..");
-const input = (path: string) => /^\/(feed|live)\/[a-z-]{1,16}\.json$/.test(path);
+const INPUT = /^\/(feed|live)\/([a-z-]{1,16})\.json$/;
+
+/** The grants the run has: stand.asks when a test sets them, else the manifest's. */
+function asks(): string[] {
+  return stand.asks ?? manifestAsks();
+}
+
+/** The grants the manifest in `dir` asks for. */
+export function manifestAsks(dir = root): string[] {
+  const manifest = JSON.parse(fs_.readFileSync(path.join(dir, "tehas-plugin.json"), "utf8")) as { asks?: string[] };
+  return manifest.asks ?? [];
+}
+
+/** Throws unless the run may touch `path`: /out always, /state with keep. Each refusal names why. */
+function refuse(path: string): void {
+  if (path.includes("..")) throw new Error(`not granted: ${path} has ..`);
+  if (path.startsWith("/out/")) return;
+  if (path.startsWith("/state/")) {
+    if (!asks().includes("keep")) throw new Error(`not granted: ${path} needs keep`);
+    return;
+  }
+  throw new Error(`not granted: ${path} is outside /out, /state and the inputs`);
+}
 
 export const fs = {
   read(path: string): Uint8Array {
-    if (!granted(path) && !input(path)) throw new Error(`not granted: ${path}`);
+    const inputOf = INPUT.exec(path);
+    if (inputOf) {
+      // An input says which of three it is, so a test that passes knows it
+      // read an input that was there: not granted, granted but with nothing
+      // behind it (the operator has none), or the input.
+      const grant = `${inputOf[1]}:${inputOf[2]}`;
+      if (!asks().includes(grant)) throw new Error(`not granted: ${path} needs ${grant}`);
+      const data = stand.files.get(path);
+      if (!data) throw new Error(`no input: ${path}; the stub has nothing behind ${grant} (set it in stand.files)`);
+      return data;
+    }
+    refuse(path);
     const data = stand.files.get(path);
     if (!data) throw new Error(`not found: ${path}`);
     return data;
   },
   write(path: string, data: Uint8Array): void {
-    if (!granted(path)) throw new Error(`not granted: ${path}`);
+    if (INPUT.test(path)) throw new Error(`not granted: ${path} is an input, read-only`);
+    refuse(path);
     if (stand.refuseWrites) throw new Error(stand.refuseWrites);
     stand.files.set(path, data);
   },
