@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { NO_READING, OUT, type RefreshAnswer } from "#dist/view/host.model.js";
+import { OUT, type RefreshAnswer } from "#dist/view/host.model.js";
 import { load, play, SCENARIOS } from "../sim/scenario.ts";
 import { type Browser, launch, withView } from "./browser.ts";
 
@@ -69,8 +69,8 @@ test("the ok plan draws the snapshot in Chromium", async () => {
 test("the no-feed plan leaves the panel hidden and says there is no reading", async () => {
   const plan = await play(load("no-feed"));
   await withView(browser, plan, async (view, errors) => {
-    await view.waitForSelector("#host-none:not([hidden])");
-    assert.equal(await view.textContent("#host-none"), NO_READING);
+    await view.waitForSelector("#host-refresh");
+    assert.equal(await view.textContent("#host-none"), "No host reading: tehas is not sampling the host for this plugin.");
     assert.equal(await view.$eval("#host", (el) => (el as HTMLElement).hidden), true);
     assert.deepEqual(errors, []);
   });

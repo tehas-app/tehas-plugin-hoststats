@@ -29,7 +29,10 @@ refresh never wrote `/state`.
 
 A press of "refresh", or a run by hand. The 1.x view polled its feed every
 5 seconds; under spec v2 the view fetches nothing, so the 1.x poll has no
-port-side equivalent and the panel refreshes on press. The timed run
+port-side equivalent. Pressing Refresh runs the driver again and shows
+its answer on the status line; the drawn snapshot comes from the output the
+host pushes to the frame, and follows every re-push the view wrapper of
+tehas-factory#3305 gives. The timed run
 (`every:1m`, matching the 5-second sampling closely enough for a stale
 marker) waits on the `every:` and `clock:` triggers of tehas-factory#3309,
 and the live view frame waits on the view wrapper of tehas-factory#3305.

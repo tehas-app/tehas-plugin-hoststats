@@ -21,7 +21,9 @@ template's `docs/porting.md`; this is what it took here.
    pure model in `host.model.ts` holds the port of the 1.x `host-data.js`
    (`layout`, `uptime`, `agoText`, and the parsing of the pushed output);
    `host.render.tsx` draws what the 1.x `host-view.js` drew. `host.css`
-   and `theme.css` are the 1.x files byte for byte. The 1.x fetch of
+   and `theme.css` are the 1.x stylesheets through the
+   repository's formatter, with four documented suppressions where the
+   recommended lint would drop declarations the 1.x design depends on. The 1.x fetch of
    `/_feed/host.json` is gone: under `connect-src 'none'` the view takes
    the snapshot from the host over its port and presses `refresh` for a
    fresh one. The 5-second poll has no port-side equivalent and returns

@@ -13,20 +13,16 @@ import {
   agoText,
   fromAnswer,
   fromOutput,
-  LOADING,
   lastReading,
   layout,
   MISSING,
-  NO_READING,
   OUT,
-  ROWS,
   reading,
   refreshLine,
   type Seen,
   type Snapshot,
   STALE_AFTER,
   snapshot,
-  UNITS,
   uptime,
   waiting,
 } from "#dist/view/host.model.js";
@@ -101,9 +97,9 @@ test("a longer list is cut to what the page draws, and names to 64 characters", 
     units: Array.from({ length: 50 }, (_, i) => ({ id: `u${i}.service` })),
   };
   const v = layout(many, AT);
-  assert.equal(v.rows.length, ROWS);
+  assert.equal(v.rows.length, 15);
   assert.equal(v.rows[0]?.name.length, 64);
-  assert.equal(v.units.length, UNITS);
+  assert.equal(v.units.length, 30);
 });
 
 test("uptime reads in the coarsest unit", () => {
@@ -138,8 +134,8 @@ test("what has been seen: nothing until the output answers", () => {
 });
 
 test("the status lines: loading, no reading, the host's reason, and the refresh's own", () => {
-  assert.equal(reading(waiting), LOADING);
-  assert.equal(reading(seen({ state: "failed", why: MISSING }, waiting.press)), NO_READING);
+  assert.equal(reading(waiting), "Reading the host feed.");
+  assert.equal(reading(seen({ state: "failed", why: MISSING }, waiting.press)), "No host reading: tehas is not sampling the host for this plugin.");
   assert.equal(
     reading(seen({ state: "failed", why: "down: test-error: the plugin is not running" }, waiting.press)),
     "No host reading: down: test-error: the plugin is not running.",
@@ -147,7 +143,7 @@ test("the status lines: loading, no reading, the host's reason, and the refresh'
   assert.equal(reading(seen({ state: "ok", value: host as Snapshot }, waiting.press)), "");
   assert.equal(refreshLine(waiting), "");
   const out = { state: "ok" as const, value: host as Snapshot };
-  assert.equal(refreshLine(seen(out, { state: "waiting" })), LOADING);
+  assert.equal(refreshLine(seen(out, { state: "waiting" })), "Reading the host feed.");
   assert.equal(refreshLine(seen(out, { state: "ok", value: { state: "ok", bytes: 2048 } })), "Refreshed: 2048 bytes.");
   assert.equal(refreshLine(seen(out, { state: "failed", why: "busy: test-error" })), "Refresh failed: busy: test-error.");
 });
