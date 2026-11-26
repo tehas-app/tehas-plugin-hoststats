@@ -78,8 +78,20 @@ const allowed = {
   driver: (spec) => spec === "tehas" || spec.startsWith("./"),
   view: (spec) => spec === "solid-js" || spec === "@solidjs/web" || spec.startsWith("./"),
 };
+/** Every file under `dir` at any depth, as paths relative to it. A link is never followed: it is a problem. */
+function walk(dir, rel = "") {
+  const out = [];
+  for (const name of fs.readdirSync(path.join(dir, rel)).sort()) {
+    const r = rel ? `${rel}/${name}` : name;
+    const st = fs.lstatSync(path.join(dir, r));
+    if (st.isSymbolicLink()) problems.push(`${path.relative(root, path.join(dir, r))}: a link; make it a plain file`);
+    else if (st.isDirectory()) out.push(...walk(dir, r));
+    else out.push(r);
+  }
+  return out;
+}
 for (const part of Object.keys(allowed)) {
-  for (const name of fs.readdirSync(path.join(dist, part))) {
+  for (const name of walk(path.join(dist, part))) {
     if (!name.endsWith(".js")) continue;
     const file = `dist/${part}/${name}`;
     const text = fs.readFileSync(path.join(dist, part, name), "utf8");

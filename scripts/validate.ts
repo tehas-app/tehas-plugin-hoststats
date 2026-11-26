@@ -213,13 +213,24 @@ export function check(root: string): Problem[] {
   if (wasmBytes > 32 * 1024 * 1024) add("dist/wasm/", "(files)", "are over 32 MiB together", "make the modules smaller");
 
   // Grants: each declared grant used, each used call granted.
-  const driverText = fs.existsSync(path.join(root, "dist/driver"))
-    ? fs
-        .readdirSync(path.join(root, "dist/driver"))
-        .filter((f) => f.endsWith(".js"))
-        .map((f) => read(`dist/driver/${f}`))
-        .join("\n")
-    : "";
+  // Every file under dist/driver/, at any depth, is read, and anything that
+  // is not a .js file there is refused: a check must not be blind to a file
+  // the operator would load.
+  // Links are never followed: git keeps the link, not what it points at.
+  const driverFiles: string[] = [];
+  const walk = (rel: string) => {
+    for (const name of fs.readdirSync(path.join(root, "dist/driver", rel)).sort()) {
+      const r = rel ? `${rel}/${name}` : name;
+      const st = fs.lstatSync(path.join(root, "dist/driver", r));
+      if (st.isSymbolicLink()) add(`dist/driver/${r}`, "(file)", "is a link, which no check follows", "make it a plain file");
+      else if (st.isDirectory()) walk(r);
+      else if (!st.isFile() || !r.endsWith(".js"))
+        add(`dist/driver/${r}`, "(file)", "is not a .js module, so no check reads it and the operator won't load it", "build it to .js, or remove it");
+      else driverFiles.push(r);
+    }
+  };
+  if (fs.existsSync(path.join(root, "dist/driver"))) walk("");
+  const driverText = driverFiles.map((f) => read(`dist/driver/${f}`)).join("\n");
   // Each grant the schema knows, and what uses it. A grant with no rule here
   // is refused, so a new grant needs its rule before any plugin can ask it.
   const actions = manifest.actions && typeof manifest.actions === "object" && !Array.isArray(manifest.actions) ? Object.keys(manifest.actions) : [];

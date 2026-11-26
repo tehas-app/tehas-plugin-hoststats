@@ -114,3 +114,17 @@ test("the architecture test refuses the same forms in src/, and global state", (
     remove(dir);
   }
 });
+
+test("bin/build checks a driver module in a subfolder too", () => {
+  const dir = copyTree();
+  try {
+    linkTools(dir);
+    fs.mkdirSync(path.join(dir, "src/driver/util"), { recursive: true });
+    fs.writeFileSync(path.join(dir, "src/driver/util/bad.ts"), 'export const c = eval("1");\n');
+    const r = spawnSync("bash", [path.join(dir, "bin", "build")], { cwd: dir, encoding: "utf8" });
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.ok(r.stderr.includes("dist/driver/util/bad.js:1: eval"), r.stderr);
+  } finally {
+    remove(dir);
+  }
+});

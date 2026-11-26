@@ -302,6 +302,39 @@ test("an unpinned dependency, and TypeScript that is not 7.x", () => {
   );
 });
 
+test("a driver module in a subfolder is read: its feed read counts, and so does its missing grant", () => {
+  // hoststats already asks feed:host, so the subfolder read is covered as is.
+  const used = after((d) => {
+    fs.mkdirSync(path.join(d, "dist/driver/util"), { recursive: true });
+    fs.writeFileSync(path.join(d, "dist/driver/util/read.js"), 'export const feed = "/feed/host.json";\n');
+  });
+  assert.deepEqual(used, []);
+  const uncovered = after((d) => {
+    fs.mkdirSync(path.join(d, "dist/driver/util"), { recursive: true });
+    fs.writeFileSync(path.join(d, "dist/driver/util/read.js"), 'export const feed = "/feed/mesh.json";\n');
+  });
+  assert.deepEqual(uncovered, ['tehas-plugin.json: asks: the driver reads /feed/mesh.json, which no grant covers; add "feed:mesh" to asks']);
+});
+
+test("a file under dist/driver that is not .js is refused", () => {
+  const p = after((d) => fs.writeFileSync(path.join(d, "dist/driver/old.mjs"), "export {};\n"));
+  assert.deepEqual(p, ["dist/driver/old.mjs: (file): is not a .js module, so no check reads it and the operator won't load it; build it to .js, or remove it"]);
+});
+
+test("a link under dist/driver is refused and never followed", () => {
+  const p = after((d) => {
+    fs.writeFileSync(path.join(d, "outside.js"), "git.push(1);\n");
+    fs.symlinkSync(path.join(d, "outside.js"), path.join(d, "dist/driver/out.js"));
+    fs.symlinkSync("..", path.join(d, "dist/driver/loop"));
+    fs.symlinkSync(path.join(d, "nowhere.js"), path.join(d, "dist/driver/dangling.js"));
+  });
+  assert.deepEqual(p, [
+    "dist/driver/dangling.js: (file): is a link, which no check follows; make it a plain file",
+    "dist/driver/loop: (file): is a link, which no check follows; make it a plain file",
+    "dist/driver/out.js: (file): is a link, which no check follows; make it a plain file",
+  ]);
+});
+
 test("an action not pinned by sha", () => {
   const p = after((d) => edit(d, ".github/workflows/check.yml", (s) => s.replace(/actions\/checkout@[0-9a-f]{40}/, "actions/checkout@v7")));
   assert.equal(p.length, 1);
