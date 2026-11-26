@@ -217,6 +217,9 @@ export function check(root: string): Problem[] {
   // is not a .js file there is refused: a check must not be blind to a file
   // the operator would load.
   // Links are never followed: git keeps the link, not what it points at.
+  // This imitates the platform's own walk (tehas-factory
+  // console/attach/src/plugin_files.rs: symlink_metadata, no link followed),
+  // and bin/build's walk does the same; keep the three alike.
   const driverFiles: string[] = [];
   const walk = (rel: string) => {
     for (const name of fs.readdirSync(path.join(root, "dist/driver", rel)).sort()) {
@@ -236,6 +239,10 @@ export function check(root: string): Problem[] {
   const actions = manifest.actions && typeof manifest.actions === "object" && !Array.isArray(manifest.actions) ? Object.keys(manifest.actions) : [];
   const usesGit = /\bgit\.\w+\(/.test(driverText);
   const usesModel = /\bmodel\.chat\(/.test(driverText);
+  // The scope is the driver alone, on purpose: a view can't reach an input.
+  // bin/build lets a view import only Solid and its own ./ files, never
+  // `tehas`, and sim/stub/register.ts wires the stub's fs behind the driver
+  // only, so a view's data comes over its port and nothing else.
   // Each input the driver reads, by its literal path: a feed:<name> or
   // live:<name> grant covers exactly "/feed/<name>.json" or
   // "/live/<name>.json". A path built at run time can't be checked against a

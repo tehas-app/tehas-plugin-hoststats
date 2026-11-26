@@ -80,6 +80,13 @@ bin/sim                    # the ok scenario, with a Refresh button
 bin/sim --scenario no-feed # the answer when there is no snapshot
 ```
 
+**Not installable yet.** This plugin says `"plugin": 2` and `"spec"`. The
+tehas on `v2.1` today still reads manifest version 1 only
+(`console/core/src/plugin/manifest.rs`), so it refuses this manifest, and
+`tehas plugin check` exits 3. That changes when the manifest reader moves
+to version 2 (tehas-factory#3297, #3301). Until then, develop and test on
+`bin/sim`, and don't install the plugin on a factory.
+
 `bin/validate` ends `ready`, or names the first thing to fix. Until
 tehas-factory#3297 lands, the stub and the hand-written `src/tehas.d.ts`
 stand in for tehas's fakes and generated types. Going live waits on the

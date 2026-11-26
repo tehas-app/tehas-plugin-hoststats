@@ -78,7 +78,11 @@ const allowed = {
   driver: (spec) => spec === "tehas" || spec.startsWith("./"),
   view: (spec) => spec === "solid-js" || spec === "@solidjs/web" || spec.startsWith("./"),
 };
-/** Every file under `dir` at any depth, as paths relative to it. A link is never followed: it is a problem. */
+/**
+ * Every file under `dir` at any depth, as paths relative to it. A link is
+ * never followed: it is a problem. The same discipline as the platform's
+ * console/attach/src/plugin_files.rs and scripts/validate.ts's walk.
+ */
 function walk(dir, rel = "") {
   const out = [];
   for (const name of fs.readdirSync(path.join(dir, rel)).sort()) {
