@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Runs the type check and every test: the driver, the view's logic, the view
+# in headless Chromium, the round trip, the simulator's scenarios, the
+# stylesheet and bin/. check.yml calls it. Arguments go to node's test
+# runner, for example `bin/test --test-name-pattern=connectivity` for the
+# connectivity check.
+#
+# It builds first (bin/build, which type checks src/), then type checks and
+# compiles tests/ and sim/ into build/js/ with the same tsc, and runs them.
+# It runs on the author's machine or in CI, never in the plugin or the
+# operator.
+#
+# usage: bin/test [node test runner options]
+# exit: 0 every check passed; 1 a type error or a test failed.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+bin/build
+npx --no-install tsc -p tsconfig.tests.json
+# The browser of the pinned Playwright; nothing to do when it is there.
+npx --no-install playwright install --only-shell chromium
+node --import ./build/js/sim/stub/register.js --test "$@" build/js/tests/*.test.js

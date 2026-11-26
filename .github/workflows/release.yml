@@ -1,0 +1,42 @@
+# Tags a release after check passes on main: bin/tag works out the version
+# from the commits' Release: trailers, runs bin/validate, makes the
+# annotated tag, and this job pushes it. To tag by hand instead, delete this
+# file.
+name: release
+on:
+  workflow_run:
+    workflows: [check]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: write
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  tag:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.22.1
+      - name: the pinned tools
+        run: |
+          npm ci --no-audit --no-fund
+          npx --no-install playwright install --with-deps --only-shell chromium
+          if [ -d src/wasm/score ]; then (cd src/wasm/score && rustup toolchain install); fi
+      - name: tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          version=$(bin/next-version)
+          bin/tag
+          if [ -n "$version" ] && git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+            git push origin "refs/tags/$version"
+          fi

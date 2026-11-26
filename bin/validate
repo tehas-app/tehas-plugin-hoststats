@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# Says whether the plugin is ready: the one readiness command. It runs, in
+# order, and stops at the first that fails:
+#
+#   build         bin/build: dist/ from src/, type checked, readable, no eval;
+#                 dist/ as it was must equal that fresh build
+#   types         cargo clippy -D warnings on src/wasm/score/, when it is there (tsc
+#                 ran in build)
+#   checks        the manifest against schema/manifest.schema.json, every
+#                 part's file, the skills, grants declared against grants
+#                 used, tehas.toml, tsconfig strictness, exact pins with a
+#                 lockfile, TypeScript 7.x and actions pinned by sha
+#                 (scripts/validate.ts)
+#   lint          Biome (pinned) formats and lints the TypeScript, and
+#                 the bash in bin/ through shellcheck
+#   tests         bin/test
+#   architecture  scripts/architecture.py is the standard's canonical copy
+#                 (its sha256 in scripts/architecture.py.sha256), then runs
+#   simulator     bin/sim --smoke: every scenario served once
+#   plugin check  tehas plugin check, once tehas has it (tehas-factory#3301)
+#
+# The last line is `ready`, or `not ready: ` and the first thing to fix.
+# It runs on the author's machine or in CI, never in the plugin.
+#
+# usage: bin/validate
+# exit: 0 ready; 1 not ready; 64 usage.
+set -euo pipefail
+
+if [ "$#" -ne 0 ]; then
+  echo "usage: bin/validate" >&2
+  exit 64
+fi
+cd "$(dirname "$0")/.."
+# The tests that run bin/validate themselves skip when this is set, so a run
+# never nests twice.
+export TEHAS_EXAMPLE_VALIDATING=1
+
+# step <name> <pick> <command...>: runs it quietly; on failure prints its
+# output and stops with the line `pick` chooses from it.
+step() {
+  local name=$1 pick=$2 out
+  shift 2
+  echo "validate: $name"
+  if ! out=$("$@" 2>&1); then
+    printf '%s\n' "$out" >&2
+    echo "not ready: $name: $(printf '%s\n' "$out" | "$pick")"
+    exit 1
+  fi
+}
+first() { grep -v '^\s*$' | head -n 1; }
+# The architecture test's first failing check (`<check> (R<n>): ...`), or
+# its first line when it fails otherwise (a bad architecture.toml).
+first_check() {
+  local s
+  s=$(cat)
+  if printf '%s\n' "$s" | grep -q -E '^[a-z0-9-]+ \(R[0-9]+\): '; then
+    printf '%s\n' "$s" | grep -E '^[a-z0-9-]+ \(R[0-9]+\): ' | head -n 1
+  else
+    printf '%s\n' "$s" | first
+  fi
+}
+first_problem() {
+  local s
+  s=$(cat)
+  if printf '%s\n' "$s" | grep -q -E '^[^ ].*: .*; '; then
+    printf '%s\n' "$s" | grep -E '^[^ ].*: .*; ' | head -n 1
+  else
+    printf '%s\n' "$s" | first
+  fi
+}
+first_test() { grep -E '^ *not ok [0-9]+ - ' | grep -v -E ' - build/js/tests/' | head -n 1 | sed -E 's/^ *not ok [0-9]+ - //'; }
+first_error() { grep -E -i 'error|fail|refus' | head -n 1; }
+first_build() { grep -E '^build: |error' | grep -v 'made from' | head -n 1; }
+
+# dist/ as the author left it, to compare with a fresh build of src/.
+digest() { if [ -d dist ]; then (cd dist && find . -type f -print0 | sort -z | xargs -0 sha256sum); fi; }
+before=$(digest)
+step build first_build bin/build
+if [ "$before" != "$(digest)" ]; then
+  echo "not ready: build: dist/ was not what src/ builds to; bin/build has now rebuilt it, so check the change and keep it"
+  exit 1
+fi
+if [ -d src/wasm/score ]; then
+  step types first bash -c 'cd src/wasm/score && CARGO_TARGET_DIR=../../../build/wasm cargo clippy -q --locked --release --target wasm32-wasip1 -- -D warnings'
+fi
+step checks first_problem bash -c 'npx --no-install tsc -p tsconfig.tests.json && node build/js/scripts/validate.js .'
+command -v shellcheck >/dev/null 2>&1 || { echo "not ready: lint: shellcheck is not installed; install it"; exit 1; }
+step lint first bash -c 'npx --no-install biome check . && shellcheck -x bin/*'
+step tests first_test bin/test
+step "architecture script" first bash -c 'cd scripts && sha256sum --check --quiet architecture.py.sha256 2>&1 || { echo "error: scripts/architecture.py is not tehas-standard'"'"'s canonical copy (tools/architecture.py)"; exit 1; }'
+step architecture first_check python3 -I scripts/architecture.py
+step simulator first_error bin/sim --smoke --no-build
+if command -v tehas >/dev/null 2>&1 && tehas plugin check --help >/dev/null 2>&1; then
+  step "plugin check" first tehas plugin check .
+else
+  echo "validate: plugin check: tehas plugin check is not available yet (tehas-factory#3301); skipped"
+fi
+echo ready

@@ -1,11 +1,32 @@
 {
   "name": "tehas-plugin-hoststats",
+  "version": "0.0.0",
   "private": true,
-  "description": "A tehas plugin: the machine the factory runs on: its readings, processes and units. No dependencies: this file only gives `npm test` a home.",
-  "license": "Apache-2.0",
+  "description": "A tehas plugin: the machine the factory runs on, as a view. The build and test tools only; nothing here is deployed.",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
+  "imports": {
+    "#dist/*": {
+      "types": "./build/types/*",
+      "default": "./dist/*"
+    }
+  },
   "scripts": {
-    "test": "node --test test/*.test.mjs"
-  }
+    "build": "bin/build",
+    "test": "bin/test"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.13",
+    "@biomejs/biome": "2.6.9",
+    "@solidjs/babel-plugin": "2.0.2",
+    "@solidjs/signals": "2.0.3",
+    "@solidjs/web": "2.0.3",
+    "@types/node": "22.20.7",
+    "playwright": "1.65.1",
+    "solid-js": "2.0.3",
+    "typescript": "7.0.2"
+  },
+  "license": "Apache-2.0"
 }

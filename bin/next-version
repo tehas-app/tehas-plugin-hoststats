@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Prints the next semantic version, worked out from the commits since the
+# newest vX.Y.Z tag reachable from HEAD.
+#
+# - A commit's `Release: major`, `Release: minor` or `Release: patch`
+#   trailer sets its bump; a commit with none counts as patch. The highest
+#   bump wins. The commits a merge brings in count, each with its trailer.
+# - Before 1.0.0, major counts as minor.
+# - With no tag yet, the first release is v0.1.0.
+# - With no commits since the tag, it prints nothing.
+#
+# It runs on the author's machine or in CI, never in the plugin.
+#
+# usage: bin/next-version
+# exit: 0 printed a version or nothing; 1 not a git repository, or a
+#       trailer that is not major, minor or patch; 64 usage.
+set -euo pipefail
+
+if [ "$#" -ne 0 ]; then
+  echo "usage: bin/next-version" >&2
+  exit 64
+fi
+
+git rev-parse --git-dir >/dev/null 2>&1 || { echo "next-version: not a git repository" >&2; exit 1; }
+last=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD 2>/dev/null || true)
+if [ -n "$last" ] && ! [[ "$last" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+  echo "next-version: $last is not vX.Y.Z" >&2
+  exit 1
+fi
+range=HEAD
+[ -z "$last" ] || range="$last..HEAD"
+
+# One record per commit, ending in a 0x1e byte: the Release trailer, or
+# nothing.
+bump=0  # 1 patch, 2 minor, 3 major
+commits=0
+while IFS= read -r -d $'\x1e' value; do
+  value=${value//$'\n'/}
+  commits=$((commits + 1))
+  case "$value" in
+    "" | patch) b=1 ;;
+    minor) b=2 ;;
+    major) b=3 ;;
+    *) echo "next-version: a trailer says Release: $value; write major, minor or patch" >&2; exit 1 ;;
+  esac
+  [ "$b" -le "$bump" ] || bump=$b
+done < <(git log --format='%(trailers:key=Release,valueonly,separator=)%x1e' "$range")
+
+[ "$commits" -gt 0 ] || exit 0
+if [ -z "$last" ]; then
+  echo v0.1.0
+  exit 0
+fi
+major=${BASH_REMATCH[1]} minor=${BASH_REMATCH[2]} patch=${BASH_REMATCH[3]}
+[ "$bump" -ne 3 ] || [ "$major" -ne 0 ] || bump=2
+case "$bump" in
+  3) echo "v$((major + 1)).0.0" ;;
+  2) echo "v$major.$((minor + 1)).0" ;;
+  *) echo "v$major.$minor.$((patch + 1))" ;;
+esac
